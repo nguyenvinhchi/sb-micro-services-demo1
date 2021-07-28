@@ -1,0 +1,163 @@
+version: '3.3'
+
+services:
+  config-server:
+#    image: chivitc1/config-server:0.002
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+    container_name: config-server1
+    depends_on:
+      - naming-server
+    environment:
+#      - encrypt.keyStore.location=classpath:certs/apiKeyStore.jks
+      - encrypt.keyStore.location=file:/usr/lib/jvm/java-1.8-openjdk/jre/lib/security/apiKeyStore.jks
+      - encrypt.keyStore.password=123456
+      - encrypt.keyStore.alias=apiKeyStore
+      - encrypt.keyStore.type=jks
+    ports:
+      - 8888:8888
+
+  naming-server:
+    image: chivitc1/sbms-naming-server:0.0.1
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+    container_name: naming-server1
+    ports:
+      - 8761:8761
+
+  api-gateway1:
+    image: chivitc1/sbms-api-gateway:0.0.1
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+    container_name: api-gateway1
+    depends_on:
+      - config-server
+      - naming-server
+      - rabbitmq
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+    ports:
+      - 8765:8765
+
+  currency-conversion1:
+    image: chivitc1/sbms-currency-conversion-service:0.0.1
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 384M
+    container_name: currency-conversion1
+    depends_on:
+      - config-server
+      - naming-server
+      - rabbitmq
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+#    ports:
+#      - 8101:8101
+
+  currency-exchange1:
+    image: chivitc1/sbms-currency-exchange-service:0.0.1
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+    container_name: currency-exchange1
+    depends_on:
+      - config-server
+      - naming-server
+      - rabbitmq
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://naming-server:8761/eureka
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+#    ports:
+#      - 8001:8001
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin1
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    hostname: zipkin
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "9411:9411"
+
+  rabbitmq:
+    image: rabbitmq:3.5-management
+    container_name: rabbitmq1
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 300M
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.3
+    container_name: elasticsearch1
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+    environment:
+      - discovery.type=single-node
+    ports:
+      - 9200:9200
+      - 9300:9300
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.13.3
+    container_name: kibana1
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+
+networks:
+  default:
+    external:
+      name: test

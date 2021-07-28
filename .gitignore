@@ -1,0 +1,32 @@
+./*/target/
+!.mvn/wrapper/maven-wrapper.jar
+.DS_Store
+mvnw.cmd
+./*/.mvn
+./*/.gradle
+
+### STS ###
+./*/.apt_generated
+./*/.factorypath
+./*/.springBeans
+
+### Eclipse ###
+.classpath
+.project
+.settings/
+./*/.classpath
+./*/.project
+./*/.settings/
+### IntelliJ IDEA ###
+*.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
